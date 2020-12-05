@@ -1,0 +1,5 @@
+*__pycache__/
+
+# Directories created after training/evaluating a model
+checkpoints/
+reports/

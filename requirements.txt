@@ -1,0 +1,4 @@
+seqeval
+allennlp
+scikit-learn
+flair

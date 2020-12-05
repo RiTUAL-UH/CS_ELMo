@@ -1,0 +1,48 @@
+{
+    "experiment": "lid.nepeng.exp2.4",
+    "description": "ELMo baselines using hierarchical ngram attention with position",
+    "task": "lid",
+    "dataset": {
+        "train": "lid_calcs14_nepeng/train.txt",
+        "dev": "lid_calcs14_nepeng/dev.txt",
+        "test": "lid_calcs14_nepeng/test.txt"
+    },
+    "model": {
+        "name": "elmo",
+        "version": "small",
+        "elmo_requires_grad": true,
+        "embeddings": [],
+        "use_lstm": true,
+        "lstm_hidden_dim": 128,
+        "use_crf": true,
+        "charngrams": {
+            "ngram_order": 4,
+            "mechanism": "hier_attention",
+            "use_second_task": false,
+            "use_at_last_layer": false,
+            "use_position": true
+        },
+        "dropout": 0.5
+    },
+    "training": {
+        "epochs": 30,
+        "batch_size": 10,
+        "optimizer": {
+            "name": "adam",
+            "lr": 1e-3,
+            "weight_decay": 0.0,
+            "beta1": 0.9,
+            "beta2": 0.999
+        },
+        "lr_scheduler": {
+            "name": "plateau",
+            "factor": 0.3,
+            "patience": 5
+        },
+        "l2": 0,
+        "clip_grad": 0
+    },
+    "evaluation": {
+        "batch_size": 25
+    }
+}

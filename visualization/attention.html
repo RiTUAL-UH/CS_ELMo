@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <style>
+        #sentences{
+            min-height: 700px;
+            max-height: 700px;
+            overflow: scroll;
+        }
+        .post {
+            border: solid 1px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px #888888;
+            padding: 15px;
+            word-wrap: break-word;
+            margin-bottom: 40px;
+        }
+        .token{
+            display: inline-block;
+            text-align: center;
+            /*margin: 0 auto;*/
+            margin-bottom: 5px;
+        }
+        .word {
+            padding:5px  0px 5px 0px;
+            border: 1px solid black;
+            margin: 5px;
+        }
+        .hi-ngram {
+            display: inline-block;
+            width: 4px;
+            bottom: 3px;
+            position: absolute;
+            background-color: gray;
+            margin: 0px 1px 0px 1px;
+        }
+        .hi-ngram-div{
+            height: 35px;
+            width: 100%;
+            margin: 0px;
+            position: relative;
+            min-width: 30px;
+        }
+        .char {
+            padding:5px  5px 5px 5px;
+        }
+        .pred{
+            /*font-style: italic;*/
+            font-size: x-small;
+        }
+        .tag{
+            font-size: small;
+            height: 1rem;
+        }
+        .control-panel{
+            margin-bottom: 50px;
+            max-width: 40%;
+            padding-top: 20px;
+        }
+        label {
+            margin-top: 1rem;
+        }
+        legend {
+            background-color: #000;
+            color: #fff;
+            padding: 3px 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Attention Visualization Tool</h2>
+
+    <fieldset class="control-panel">
+        <legend>Control Panel</legend>
+        <label for="fileinput">JSON file:</label>
+        <input type="file" id="fileinput" value="Upload" onchange="handleFileSelect()"/>
+        <br/>
+        <br/>
+
+        <div>
+            <label for="colormap">Attention settings:</label>
+                <input type="radio" id="greyscale" value="greyscale" name="colormap" checked/>
+                <label for="greyscale">Grey scale</label>
+                <input type="radio" id="redalpha" value="redalpha" name="colormap"/>
+                <label for="redalpha">Red + alpha modifier</label>
+                <input type="radio" id="heatmap" value="heatmap" name="colormap"/>
+                <label for="heatmap">Heatmap</label>
+        </div>
+        <div>
+            <label for="tags">Label information:</label>
+                <input type="radio" id="show-tag" value="show" name="tags" checked/>
+                <label for="show-tag">Show labels</label>
+                <input type="radio" id="hide-tag" value="hide" name="tags" />
+                <label for="hide-tag">Hide labels</label>
+        </div>
+        <div>
+            <label for="tags">N-gram order:</label>
+                <input type="radio" id="ngram-order-1" value="1" name="ngram-order" />
+                <label for="ngram-order-1">Unigrams</label>
+                <input type="radio" id="ngram-order-2" value="2" name="ngram-order" checked/>
+                <label for="ngram-order-2">Bigrams</label>
+                <input type="radio" id="ngram-order-3" value="3" name="ngram-order"/>
+                <label for="ngram-order-3">Trigrams</label>
+                <input type="radio" id="ngram-order-4" value="4" name="ngram-order"/>
+                <label for="ngram-order-4">Fourgrams</label>
+        </div>
+    </fieldset>
+
+    <div id="sentences"></div>
+</body>
+</html>
+
+<script type="application/javascript">
+    var handleFileSelect = function()
+    {
+        if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+            alert('The File APIs are not fully supported in this browser.');
+            return;
+        }
+
+        input = document.getElementById('fileinput');
+        if (!input) {
+            alert("Um, couldn't find the fileinput element.");
+        }
+        else if (!input.files) {
+            alert("This browser doesn't seem to support the `files` property of file inputs.");
+        }
+        else if (!input.files[0]) {
+            alert("Please select a file before clicking 'Load'");
+        }
+        else {
+            file = input.files[0];
+            fr = new FileReader();
+            fr.onload = receivedText;
+            fr.readAsText(file);
+        }
+    };
+
+    var greyscale = function(prob, alpha)
+    {
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        r = 255 * (1 - prob);
+        g = 255 * (1 - prob);
+        b = 255 * (1 - prob);
+
+        var color = "rgb(" + r + ", " + g + ", " + b + ", " + alpha +" )";
+        return color
+    };
+
+    var heatmap = function(prob)
+    {
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        if(prob <= 0.5)
+        {
+            r = 255;                //at full strength
+            g = (prob / 0.5) * 255; //increase G gradually
+        }
+        else
+        {
+            r = 255 - ((prob - 0.5) / 0.5) * 255;   //decrease gradually
+            g = 255;                               //at full strength
+        }
+
+        r = parseInt(r);
+        g = parseInt(g);
+        b = parseInt(b);
+
+        var color = "rgb(" + r + ", " + g + ", " + b + ")";
+        // console.log(color);
+
+        return color;
+    };
+
+    var redAlpha = function(prob) {
+        return "rgba(250, 30, 30, " + prob + ")";
+    };
+
+    var receivedText = function()
+    {
+        $("#sentences").empty();
+        var counter = 0;
+
+        var json = JSON.parse(fr.result);
+
+        for (var post_id = 0; post_id < json.sentences.length; post_id++)
+        {
+            var haslang1 = false;
+            var haslang2 = false;
+
+            var post = json.sentences[post_id];
+            var postDiv = $('<div/>', {
+                id: post_id,
+                class: 'post'
+            }).html($.map(post, function(token){
+
+                var correct = token.label === token.pred;
+                var wordDiv = $('<div/>', {class: 'word'});
+                var tagDiv  = $('<div/>', {class: 'tag',  text: token.word});
+                var predDiv = $('<div/>', {class: 'pred', text: (correct ? '\u2713': '\u2717') + token.pred});
+
+                if (token.label.localeCompare("lang1") == 0) haslang1 = true;
+                if (token.label.localeCompare("lang2") == 0) haslang2 = true;
+
+                var ngramOrder1 = $('<div/>', {class: 'hi-ngram'}).css({'height': 30 * token.char_nrgam[0] + 'px', 'width': '3px', 'right': '40%'});
+                var ngramOrder2 = $('<div/>', {class: 'hi-ngram'}).css({'height': 30 * token.char_nrgam[1] + 'px', 'width': '3px', 'right': '48%'});
+                var ngramOrder3 = $('<div/>', {class: 'hi-ngram'}).css({'height': 30 * token.char_nrgam[2] + 'px', 'width': '3px', 'right': '56%'});
+                var ngramOrder4 = $('<div/>', {class: 'hi-ngram'}).css({'height': 30 * token.char_nrgam[3] + 'px', 'width': '3px', 'right': '62%'});
+
+                var ngramDiv = $('<div/>', {class: 'hi-ngram-div'})
+                                .append(ngramOrder1)
+                                .append(ngramOrder2)
+                                .append(ngramOrder3)
+                                .append(ngramOrder4);
+
+                var ngramorder = parseInt($("input[name='ngram-order']:checked").val());
+                var ngram_key = 'char_' + ngramorder + 'gram_attentions';
+
+                if (token.hasOwnProperty(ngram_key)){
+                    if (token.word.length < ngramorder){
+                        $(wordDiv).append($('<span/>', {class: 'char', text: token.word, attention: 0.0}));
+                    }
+
+                    for(var i = 0; i < token.word.length - ngramorder + 1; i++){
+                        var start = i;
+                        var end = i + ngramorder;
+
+                        var ngrams = token.word.substring(start, end);
+                        var charspan = $('<span/>', {
+                                            class: 'char',
+                                            text: ngrams,
+                                            attention: token[ngram_key][i]
+                                        }).css({'background': greyscale(token[ngram_key][i], 0.75)});
+                        $(wordDiv).append(charspan);
+                    }
+                }
+
+                return $('<div/>', {class: 'token'})
+                            // .append(ngramDiv)
+                            .append(wordDiv)
+                            .append(tagDiv)
+                            .append(predDiv);
+            }));
+
+            if (haslang1 && haslang2){
+                $(postDiv).appendTo('#sentences');
+                counter++;
+                if (counter > 100) break;
+            }
+        }
+    };
+
+    $('input:radio[name=tags]').change(function () {
+        if ($("input[name='tags']:checked").val() == 'hide') {
+            $('.tag').css({'display': 'none'});
+            $('.pred').css({'display': 'none'});
+        }
+        if ($("input[name='tags']:checked").val() == 'show') {
+            $('.tag').css({'display': ''});
+            $('.pred').css({'display': ''});
+        }
+    });
+
+    $('input:radio[name=colormap]').change(function () {
+        if ($("input[name='colormap']:checked").val() == 'redalpha') {
+            $.map($('.char'), function(word){
+                $(word).css({'background': redAlpha($(word).attr('attention'))});
+            });
+        }
+        else if ($("input[name='colormap']:checked").val() == 'heatmap') {
+            $.map($('.char'), function(word){
+                $(word).css({'background': heatmap($(word).attr('attention'))});
+            });
+        }
+        else if ($("input[name='colormap']:checked").val() == 'greyscale') {
+            $.map($('.char'), function(word){
+                $(word).css({'background': greyscale($(word).attr('attention'))});
+            });
+        }
+    });
+</script>
