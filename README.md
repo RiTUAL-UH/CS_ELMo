@@ -1,10 +1,16 @@
 # From English to Code-Switching: Transfer Learning with Strong Morphological Clues (ACL 2020)
 <p align="right"><i>Authors: Gustavo Aguilar and Thamar Solorio</i></p> 
 
-_**NOTE:** We are still working on releasing this project entirely, but we hope you can find useful the modeling code in the meantime._
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
 This repository contains the implementations of the **CS-ELMo** model introduced in the paper 
 ["From English to Code-Switching: Transfer Learning with Strong Morphological Clues"](https://www.aclweb.org/anthology/2020.acl-main.716.pdf) at ACL 2020.
+
+<div><img src="images/cselmo_seqtagger.png" width="55%"/></div>
+
+The main contribution of this model is the **enhanced character n-gram module** 
+(the highlighted component from the image). 
+Please refer to the [paper](https://www.aclweb.org/anthology/2020.acl-main.716.pdf) for details.
 
 
 ## Installation
@@ -23,33 +29,83 @@ Also, install the dependencies specified in the requirements.txt:
 pip install -r requirements.txt
 ```
 
+## Data
+
+This repo contains dataset files that serve as templates. 
+Please replace the 
+
 ## Running
 
-We use configs to specify hyper-parameters for every experiment. You can use or modify any config file from the `CS_ELMo/configs` directory.
+There are two main stages to run this project.
+1. Code-switching adaptation with LID
+2. Code-switching downstream fine-tuning
 
-To run an experiment use the following command:
+> We use config files to specify the details for every experiment (e.g., hyper-parameters, datasets, etc.). You can use or modify any config file from the `CS_ELMo/configs` directory.
 
-```bash
-python src/main.py --config configs/lid.nepeng.exp2.4.json
+### 1. Code-switching adaptation with LID
+
+We use multi-task learning (MTL) with the full and simplified LID label schemes. 
+To train this model in the MTL setting, make sure the config file contains the `"use_second_task"` field:
+
+```json
+"model": {
+    ...
+    "charngrams": {
+        "use_second_task": true,
+        ...
+    }
+}
 ```
 
-You can also specify the GPU number by providing the option `--gpu` (e.g., `--gpu 1`). Otherwise, the code is executed on CPU.
+You can train a model from pre-defined config files from this repo like this (Exp3.3 from the paper):
 
-#### Checkpoints
+```bash
+python src/main.py --config configs/lid.spaeng.exp3.3.json --gpu 0
+```
 
-The code saves the model checkpoint after every epoch if the model improved (either lower loss or higher metric). 
-You will notice that a directory will be created with using the id of the experiment (e.g., `CS_ELMo/checkpoints/lid.nepeng.exp1`)
+> The `gpu` argument specifies the GPU label and is optional. If `gpu` is not provided, the code runs on CPU.
 
-If you run the code again, the project will ask wether to train from the checkpoint or to train from scratch, if `--mode train` is specified. 
-If you want to evaluate the model, provide `--mode eval`.
+The code saves a model checkpoint after every epoch if the model improves (either lower loss or higher metric). 
+You will notice that a directory is created using the experiment id (e.g., `CS_ELMo/checkpoints/lid.spaeng.exp3.3/`). 
+You can resume training by running the same command.
 
-#### Visualizations
+To evaluate the model, use `--mode eval` (default: `train`):
+
+```bash
+python src/main.py --config configs/lid.spaeng.exp3.3.json --gpu 0 --mode eval
+```
+
+### 2. Code-switching downstream fine-tuning
+
+Now you can load the CS-adapted model (a.k.a CS-ELMo) and fine-tune it to downstream tasks like NER or POS tagging. 
+Here's an example for NER (Exp 5.2 from the paper):
+
+```bash
+python src/main.py --config configs/ner.spaeng.exp5.2.json --gpu 0
+```
+
+The config contains the following fields to do the fine-tuning:
+
+```json
+    ...
+    "pretrained_config": {
+        "path": "configs/lid.spaeng.exp3.3.json",
+        "pretrained_part": "elmo",
+        "finetuning_mode": "frozen_elmo"
+    }
+```
+
+the fine-tuning mode can be any option from `['fully_trainable', 'frozen_elmo', 'inference']`, and the pre-trained part can be either just the CS-ELMo architecture (i.e., `"elmo"`) or using possible weights that resemble the new model such as BLSTM, word embeddings, and the simplified LID inference layer (i.e., `"full"`).
+
+
+### Visualizations
 
 We have added a Javascript/HTML script to visualize the attention weights in the hierarchical model. 
 The tool is located at `CS_ELMO/visualization/attention.html`, and you will need to load a JSON file containing the attention weights.
-This JSON file is automatically generated after evaluating a model.
+This JSON file is automatically generated after evaluating a model. 
+Here's an example of how the tool works:
 
-TODO: add visualization example
+<div><img src="images/visualization.png" width="60%"/></div>
 
 
 ## Citation

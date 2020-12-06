@@ -1,25 +1,25 @@
 {
-    "experiment": "lid.nepeng.exp2.4",
-    "description": "ELMo baselines using hierarchical ngram attention with position",
+    "experiment": "lid.spaeng.exp3.3",
+    "description": "CS-ELMo with hierarchical attention and position embeddings",
     "task": "lid",
     "dataset": {
-        "train": "lid_calcs14_nepeng/train.txt",
-        "dev": "lid_calcs14_nepeng/dev.txt",
-        "test": "lid_calcs14_nepeng/test.txt"
+        "train": "lid_calcs16_spaeng/train.txt",
+        "dev": "lid_calcs16_spaeng/dev.txt",
+        "test": "lid_calcs16_spaeng/test.txt"
     },
     "model": {
         "name": "elmo",
-        "version": "small",
+        "version": "original",
         "elmo_requires_grad": true,
-        "embeddings": [],
+        "embeddings": ["crawl", "twitter", "glove"],
         "use_lstm": true,
         "lstm_hidden_dim": 128,
         "use_crf": true,
         "charngrams": {
-            "ngram_order": 4,
+            "ngram_order": 3,
             "mechanism": "hier_attention",
-            "use_second_task": false,
-            "use_at_last_layer": false,
+            "use_second_task": true,
+            "use_at_last_layer": true,
             "use_position": true
         },
         "dropout": 0.5

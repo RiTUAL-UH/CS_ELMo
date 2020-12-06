@@ -1,0 +1,53 @@
+{
+    "experiment": "ner.spaeng.exp5.2",
+    "description": "ELMo with CS-LID adaptation and trainable inference",
+    "task": "ner_spa",
+    "dataset": {
+        "train": "ner_calcs18_spaeng/train.txt",
+        "dev": "ner_calcs18_spaeng/dev.txt",
+        "test": "ner_calcs18_spaeng/test.txt"
+    },
+    "model": {
+        "name": "elmo",
+        "version": "original",
+        "elmo_requires_grad": true,
+        "embeddings": ["crawl", "twitter", "glove", "flair:es-forward", "flair:es-backward"],
+        "use_lstm": true,
+        "lstm_hidden_dim": 256,
+        "use_crf": true,
+        "charngrams": {
+            "ngram_order": 3,
+            "mechanism": "hier_attention",
+            "use_second_task": false,
+            "use_at_last_layer": false,
+            "use_position": true
+        },
+        "dropout": 0.5
+    },
+    "training": {
+        "epochs": 60,
+        "batch_size": 10,
+        "optimizer": {
+            "name": "adam",
+            "lr": 1e-3,
+            "weight_decay": 0.0,
+            "beta1": 0.9,
+            "beta2": 0.999
+        },
+        "lr_scheduler": {
+            "name": "plateau",
+            "factor": 0.3,
+            "patience": 10
+        },
+        "l2": 0,
+        "clip_grad": 0
+    },
+    "evaluation": {
+        "batch_size": 10
+    },
+    "pretrained_config": {
+        "path": "configs/lid.spaeng.exp3.3.json",
+        "pretrained_part": "elmo",
+        "finetuning_mode": "frozen_elmo"
+    }
+}

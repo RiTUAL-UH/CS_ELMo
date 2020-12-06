@@ -94,7 +94,6 @@ def save_model(filename, state):
 
 def try_load_model(filename, model, optimizer=None, trainer=None, scheduler=None, verbose=True):
     if os.path.exists(filename):
-        print(f"[LOG] Loading model from {filename}")
         state = torch.load(filename, map_location=f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu')
 
         if trainer is not None:
@@ -111,8 +110,7 @@ def try_load_model(filename, model, optimizer=None, trainer=None, scheduler=None
             scheduler.load_state_dict(state['scheduler'])
 
         if verbose:
-            print("[LOG] Loading model... Epoch: {:03d}, F1: {:.5f}, Loss: {:.5f}".format(
-                state['epoch'], state['f1'], state['loss']))
+            print(f"[LOG] Loading model from {filename}... Epoch: {state['epoch']:03d}, F1: {state['f1']:.5f}, Loss: {state['loss']:.5f}")
         return True
     else:
         if verbose:
@@ -151,8 +149,8 @@ def choose_model(args, n_classes):
     return model
 
 def get_pretrained_model_architecture(config_path, include_pretraining=True):
-    from src.data.dataset import CSDataset
-    from src.modeling.main import Arguments
+    from dataset import CSDataset
+    from main import Arguments
 
     args = Arguments(config_path=config_path)
     n_langids = len(set(flatten(CSDataset(args.dataset.train).langids)))

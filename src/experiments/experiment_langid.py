@@ -1,5 +1,4 @@
 import os
-import globals as glb
 import utilities as utils
 
 from collections import Counter
@@ -57,7 +56,7 @@ def main(args):
     print("[LOG] {}".format(model))
     print("[LOG] {}".format('=' * 40))
 
-    model.to(glb.DEVICE)
+    model.to(args.device)
 
     trainer = Trainer(datasets, args)
     optimizer = utils.get_optimizer(model, args)

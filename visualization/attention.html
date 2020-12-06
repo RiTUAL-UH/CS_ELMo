@@ -250,7 +250,9 @@
                             .append(predDiv);
             }));
 
-            if (haslang1 && haslang2){
+            var showall = true;
+            if (haslang1 && haslang2 || showall)
+            {
                 $(postDiv).appendTo('#sentences');
                 counter++;
                 if (counter > 100) break;

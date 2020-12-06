@@ -2,37 +2,40 @@ import os
 import re
 import json
 import argparse
+import random
+import numpy as np
+import torch
 
-import globals as glb
-import globals as glb
 import experiments.experiment_langid as experiment_lid
 import experiments.experiment_ner as experiment_ner
 import experiments.experiment_pos as experiment_pos
 
 from types import SimpleNamespace as Namespace
 
+PROJ_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 class Arguments(object):
     def __init__(self, config_path=None):
         if config_path is None:
             parser = argparse.ArgumentParser()
-            parser.add_argument('--config')
-            parser.add_argument('--mode', choices=['train', 'eval'], default='train')
-            parser.add_argument('--gpu', type=int, default=0)
-            parser.add_argument('--replicable', action='store_true')
+            parser.add_argument('--config', help="provide a relative path to a JSON config file from the configs directory")
+            parser.add_argument('--mode', choices=['train', 'eval'], default='train', help="Specify whether to train or evaluate the model")
+            parser.add_argument('--gpu', type=int, default=-1, help="The GPU label number. By default, the code runs on CPU")
+            parser.add_argument('--seed', type=int, default=42)
 
             args = parser.parse_args()
 
             # Fields expected from the command line
-            self.config = os.path.join(glb.PROJ_DIR, args.config)
+            self.config = os.path.join(PROJ_DIR, args.config)
             self.mode = args.mode
             self.gpu = args.gpu
-            self.replicable = args.replicable
+            self.seed = args.seed
         else:
             self.gpu = -1
             self.mode = 'eval'
-            self.replicable = False
-            self.config = os.path.join(glb.PROJ_DIR, config_path)
+            self.seed = 42
+            self.config = os.path.join(PROJ_DIR, config_path)
 
         assert os.path.exists(self.config) and self.config.endswith('.json'), f'Bad config path: {self.config}'
 
@@ -72,39 +75,34 @@ class Arguments(object):
             self.restore_model = args.restore_model
 
     def _format_datapaths(self):
-        self.dataset.train = os.path.join(glb.DATA_DIR, self.dataset.train)
-        self.dataset.dev = os.path.join(glb.DATA_DIR, self.dataset.dev)
-        self.dataset.test = os.path.join(glb.DATA_DIR, self.dataset.test)
+        self.dataset.train = os.path.join(PROJ_DIR, 'data', self.dataset.train)
+        self.dataset.dev   = os.path.join(PROJ_DIR, 'data', self.dataset.dev)
+        self.dataset.test  = os.path.join(PROJ_DIR, 'data', self.dataset.test)
 
     def _add_extra_fields(self):
-        self.checkpoints = os.path.join(glb.CHECKPOINT_DIR, self.experiment)
-        self.figures = os.path.join(glb.FIGURE_DIR, self.experiment)
-        self.history = os.path.join(glb.HISTORY_DIR, self.experiment)
-        self.predictions = os.path.join(glb.PREDICTIONS_DIR, self.experiment)
-        self.attentions = os.path.join(glb.ATTENTIONS_DIR, self.experiment)
+        self.checkpoints = os.path.join(PROJ_DIR, 'checkpoints', self.experiment)
+        self.figures     = os.path.join(PROJ_DIR, 'reports/figures', self.experiment)
+        self.history     = os.path.join(PROJ_DIR, 'reports/history', self.experiment)
+        self.predictions = os.path.join(PROJ_DIR, 'reports/predictions', self.experiment)
+        self.attentions  = os.path.join(PROJ_DIR, 'reports/attentions', self.experiment)
 
 
 def main():
     args = Arguments()
 
-    import numpy as np
-    import random
-    import torch
+    if torch.cuda.is_available() and args.gpu >= 0:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
-    if args.replicable:
-        seed_num = 123
-        random.seed(seed_num)
-        np.random.seed(seed_num)
-        torch.manual_seed(seed_num)
         if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed_num)
+            torch.cuda.manual_seed_all(args.seed)
             torch.backends.cudnn.deterministic = True
 
-    if torch.cuda.is_available() and args.gpu >= 0:
-        glb.DEVICE = torch.device(f"cuda:{args.gpu}")
-        torch.cuda.set_device(glb.DEVICE)
+        args.device = torch.device(f"cuda:{args.gpu}")
+        torch.cuda.set_device(args.device)
     else:
-        glb.DEVICE = torch.device("cpu")
+        args.device = torch.device("cpu")
 
     print("[LOG] {}".format('=' * 40))
     print("[LOG] {: >15}: '{}'".format("Experiment ID", args.experiment))
@@ -115,21 +113,13 @@ def main():
     print("[LOG] {: >15}: '{}'".format("Modeling", vars(args.model)))
     print("[LOG] {: >15}: '{}'".format("Training", vars(args.training)))
     print("[LOG] {: >15}: '{}'".format("Evaluation", vars(args.evaluation)))
-    print("[LOG] {: >15}: '{}'".format("Device", glb.DEVICE))
+    print("[LOG] {: >15}: '{}'".format("Device", args.device))
     print("[LOG] {}".format('=' * 40))
 
-
-    if args.task.startswith('lid'):
-        experiment_lid.main(args)
-
-    elif args.task.startswith('ner'):
-        experiment_ner.main(args)
-
-    elif args.task.startswith('pos'):
-        experiment_pos.main(args)
-
-    else:
-        raise Exception('Unexpected task: {}'.format(args.task))
+    if   args.task.startswith('lid'): experiment_lid.main(args)
+    elif args.task.startswith('ner'): experiment_ner.main(args)
+    elif args.task.startswith('pos'): experiment_pos.main(args)
+    else: raise Exception('Unexpected task: {}'.format(args.task))
 
 
 if __name__ == '__main__':

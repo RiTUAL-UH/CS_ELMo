@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-# from src.utilities import get_sinusoid_encoding_table
 
 
 def stable_softmax(scores, mask=None, epsilon=1e-9):
@@ -86,10 +85,6 @@ class LowNgramAttention(nn.Module):
             self.positions = nn.ModuleList(
                 [nn.Embedding(50 - i + 1, channels, padding_idx=0)
                  for i, channels in enumerate(self.dims)])
-
-            # self.positions = nn.ModuleList(
-            #     [nn.Embedding.from_pretrained(get_sinusoid_encoding_table(n_position=50 - i + 1, d_hid=channels, padding_idx=0), freeze=True)
-            #      for i, channels in enumerate(self.dims)])
         else:
             self.positions = None
 

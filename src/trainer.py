@@ -5,14 +5,13 @@ import torch.nn as nn
 import copy
 import numpy as np
 import utilities as utils
-import globals as glb
 
 from utilities import running_fmeasure, sklearn_fmeasure
 from utilities import save_model
 from torch.utils.data import DataLoader
 
 
-def to_tensor(labels, label2index, pad_value=0, return_mask=False):
+def to_tensor(labels, label2index, pad_value=0, return_mask=False, device='cpu'):
     maxlen = max(map(len, labels))
     target = torch.zeros(len(labels), maxlen).long() + pad_value
     mask   = torch.zeros(len(labels), maxlen).byte()
@@ -22,8 +21,8 @@ def to_tensor(labels, label2index, pad_value=0, return_mask=False):
         target[i, :len(sample)] = torch.tensor(sample, dtype=torch.long)
         mask[i, :len(sample)] = 1
 
-    target = target.to(glb.DEVICE)
-    mask = mask.to(glb.DEVICE)
+    target = target.to(device)
+    mask = mask.to(device)
 
     return (target, mask) if return_mask else target
 
@@ -77,10 +76,10 @@ class Trainer(object):
         self.args = args
 
         self.index2langid = dict(enumerate(sorted({l for d in datasets.values() for l in utils.flatten(d.langids)})))
-        self.index2cluster = dict(enumerate(sorted({l for d in datasets.values() for l in utils.flatten(d.simplified)})))
+        self.index2simplified = dict(enumerate(sorted({l for d in datasets.values() for l in utils.flatten(d.simplified)})))
 
         self.langid2index = {value: key for key, value in self.index2langid.items()}
-        self.cluster2index = {value: key for key, value in self.index2cluster.items()}
+        self.simplified2index = {value: key for key, value in self.index2simplified.items()}
 
         self.starting_epoch = 0
         self.best_f1 = -1
@@ -148,8 +147,8 @@ class Trainer(object):
                 # ================================================================================================
                 epoch_time = time.time()
                 for batch in self.dataloaders[dataset]:
-                    batch['langids']  = to_tensor(batch['langids'], self.langid2index)
-                    batch['simplified'] = to_tensor(batch['simplified'], self.cluster2index)
+                    batch['langids']  = to_tensor(batch['langids'], self.langid2index, device=self.args.device)
+                    batch['simplified'] = to_tensor(batch['simplified'], self.simplified2index, device=self.args.device)
 
                     result = model(batch)
 
@@ -188,7 +187,7 @@ class Trainer(object):
                 ehist[dataset]['f1'].append(epoch_f1)
 
                 if dataset == 'train':
-                      epoch_msg += '| [{}] Loss: {:.5f}, F1: {:.5f}, Time: {:.2f}s'.format(dataset.upper(), epoch_loss, epoch_f1, epoch_time)
+                      epoch_msg += '| [{}] Loss: {:.5f}, F1: {:.5f}, Time: {:6.2f}s'.format(dataset.upper(), epoch_loss, epoch_f1, epoch_time)
                 else: epoch_msg += '| [{}] Loss: {:.5f}, F1: {:.5f}, Acc: {:.5f}'.format(dataset.upper(), epoch_loss, epoch_f1, epoch_acc)
 
             lr_changed = False
@@ -218,8 +217,8 @@ class Trainer(object):
         for batch in self.dataloaders[dataset]:
             batch_langids = batch['langids']
 
-            batch['langids'] = to_tensor(batch['langids'], self.langid2index)
-            batch['simplified'] = to_tensor(batch['simplified'], self.cluster2index)
+            batch['langids'] = to_tensor(batch['langids'], self.langid2index, device=self.args.device)
+            batch['simplified'] = to_tensor(batch['simplified'], self.simplified2index, device=self.args.device)
 
             result = model(batch)
 

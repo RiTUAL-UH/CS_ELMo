@@ -4,7 +4,6 @@ import json
 import torch
 import torch.nn as nn
 import utilities as utils
-import globals as glb
 
 from collections import Counter
 from modeling.seqtagger import SequenceTagger
@@ -45,7 +44,7 @@ def main(args):
     print("[LOG] {}".format('=' * 40))
     print("[LOG] CORPUS LABELS")
     print("[LOG] LangID classes:", n_langids)
-    print("[LOG] Cluster classes:", n_simplified)
+    print("[LOG] Simplified classes:", n_simplified)
     print("[LOG] Entity classes:", n_entities)
     print("[LOG] POSTag classes:", n_postags)
     print("[LOG] {}".format('=' * 40))

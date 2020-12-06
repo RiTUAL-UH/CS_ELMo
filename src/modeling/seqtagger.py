@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import globals as glb
 
 from flair.embeddings import WordEmbeddings, StackedEmbeddings, FlairEmbeddings
 from flair.data import Sentence
@@ -135,9 +134,10 @@ class SequenceTagger(nn.Module):
         for i in range(len(inputs['tokens'])):
             for j in range(len(inputs['tokens'][i])):
                 char_lenghts[i, j] = min(len(inputs['tokens'][i][j]), word_length)
-
-        encoded_chars = encoded_chars.to(glb.DEVICE)
-        char_lenghts = char_lenghts.to(glb.DEVICE)
+        
+        device = next(self.parameters()).device
+        encoded_chars = encoded_chars.to(device)
+        char_lenghts = char_lenghts.to(device)
 
         outputs = self.elmo.forward(encoded_chars, char_lengths=char_lenghts)
 
@@ -294,11 +294,13 @@ class SequenceTagger(nn.Module):
         return {'loss': loss, 'logits': logits, 'tags': predicted_tags}
 
     def get_embedding(self, inputs):
-        sentences = [Sentence(' '.join(s)) for s in inputs['tokens']]
+        sentences = [Sentence(s) for s in inputs['tokens']]
         maxlen = max([len(s) for s in sentences])
 
         self.embeddings.embed(sentences)
-        output = torch.zeros(len(sentences), maxlen, self.embeddings.embedding_length).to(glb.DEVICE)
+
+        device = next(self.parameters()).device
+        output = torch.zeros(len(sentences), maxlen, self.embeddings.embedding_length).to(device)
 
         for i, sent in enumerate(sentences):
             output[i, :len(sent)] = torch.cat([t.embedding.view(1, self.embeddings.embedding_length) for t in sent], dim=0)
