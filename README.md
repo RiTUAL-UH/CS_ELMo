@@ -31,8 +31,20 @@ pip install -r requirements.txt
 
 ## Data
 
-This repo contains dataset files that serve as templates. 
-Please replace the 
+This repo contains dataset files that serve as templates for the sake of the example. 
+Please replace the files with your data. 
+You can either add a new directory in `CS_ELMo/data/your_dataset_dir` or replace the content of one of the existing dataset directories.
+Make sure you provide the correct paths to the data split in the config file. 
+For example, `CS_ELMo/configs/lid.spaeng.exp3.3.json` contains this:
+
+```json
+    ...
+    "dataset": {
+        "train": "lid_calcs16_spaeng/train.txt",
+        "dev": "lid_calcs16_spaeng/dev.txt",
+        "test": "lid_calcs16_spaeng/test.txt"
+    },
+```
 
 ## Running
 
@@ -47,7 +59,7 @@ There are two main stages to run this project.
 We use multi-task learning (MTL) with the full and simplified LID label schemes. 
 To train this model in the MTL setting, make sure the config file contains the `"use_second_task"` field:
 
-```json
+```
 "model": {
     ...
     "charngrams": {
@@ -86,7 +98,7 @@ python src/main.py --config configs/ner.spaeng.exp5.2.json --gpu 0
 
 The config contains the following fields to do the fine-tuning:
 
-```json
+```
     ...
     "pretrained_config": {
         "path": "configs/lid.spaeng.exp3.3.json",
